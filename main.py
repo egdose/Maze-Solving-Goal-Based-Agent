@@ -178,6 +178,64 @@ class Maze:
 		if down_node != None and temp_grid[down_node.y, down_node.x] == True:
 			self.traverse_util(down_node, temp_count, temp_grid)
 
+	def DFS(self):
+		temp_count = np.zeros(1, dtype=int)
+		temp_grid = np.copy(self.grid)
+
+		if self.start_node == None:
+			print("Start Node shouldn't be None!")
+			return
+		elif self.end_node == None:
+			print("End Node shouldn't be None!")
+			return
+
+		#print("Start Node:", self.start_node.x, self.start_node.y)
+		#print("End Node:", self.end_node.x, self.end_node.y)
+
+		is_finished = self.DFS_util(self.start_node, temp_count, temp_grid)
+
+		if is_finished:
+			print(f"Algorithm used = \"DFS\", No of moves utilized = {temp_count[0]}")
+		else:
+			print(f"Algorithm used = \"DFS\", End State Not Found!")
+
+
+	def DFS_util(self, cur, temp_count, temp_grid):
+		#print(f"Node Traversed at({cur.x}, {cur.y})")
+		temp_count[0] += 1
+		temp_grid[cur.y, cur.x] = False
+		up_node = cur.Adjacents[UP]
+		left_node = cur.Adjacents[LEFT]
+		right_node = cur.Adjacents[RIGHT]
+		down_node = cur.Adjacents[DOWN]
+
+		if cur == self.end_node:
+			return True
+
+		bool_up = False
+		bool_left = False
+		bool_right = False
+		bool_down = False
+
+		if up_node != None and temp_grid[up_node.y, up_node.x] == True:
+			bool_up = self.DFS_util(up_node, temp_count, temp_grid)
+			if bool_up:
+				return True
+		if left_node != None and temp_grid[left_node.y, left_node.x] == True:
+			bool_left = self.DFS_util(left_node, temp_count, temp_grid)
+			if bool_left:
+				return True
+		if right_node != None and temp_grid[right_node.y, right_node.x] == True:
+			bool_right = self.DFS_util(right_node, temp_count, temp_grid)
+			if bool_right:
+				return True
+		if down_node != None and temp_grid[down_node.y, down_node.x] == True:
+			bool_down = self.DFS_util(down_node, temp_count, temp_grid)
+			if bool_down:
+				return True
+
+		return False
+
 
 
 
@@ -210,6 +268,9 @@ def main():
 
 	#Checking Nodes
 	maze.traverse_graph()
+
+	#Find Result
+	maze.DFS()
 
 
 if __name__ == '__main__':
