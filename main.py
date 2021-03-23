@@ -2,6 +2,12 @@ import sys
 import numpy as np
 import pandas as pd
 
+#Important Enum variables for Indexing
+UP = 0
+LEFT = 1
+RIGHT = 2
+DOWN = 3
+
 class Maze:
 	class Node:
 		def __init__(self, y, x):
@@ -9,6 +15,7 @@ class Maze:
 			self.x = x
 			self.y = y
 			self.cost = [0, 0, 0, 0]
+			#print(f"New Node({self.x}, {self.y})")
 
 
 
@@ -22,9 +29,9 @@ class Maze:
 		self.end_node = None
 
 		#Hard Coding in Start Node and End Node
-		self.start_node = Maze.Node(4, 11)
-		self.end_node = Maze.Node(10, 0)
-		self.count += 2
+		#self.start_node = Maze.Node(4, 11)
+		#self.end_node = Maze.Node(10, 0)
+		#self.count += 2
 
 		#Reading Data From input.csv
 		df = None
@@ -43,33 +50,6 @@ class Maze:
 			print("Input file(rows, columns) mismatched the dimensions provided in command-line")
 			sys.exit()
 
-		#Temporary Printing For Debugging
-		print("Nodes Should be like these: ")
-		print("1, 1")
-		print("1, 3")
-		print("1, 5")
-		print("1, 10")
-		print("2, 1")
-		print("3, 5")
-		print("3, 8")
-		print("4, 1")
-		print("4, 3")
-		print("4, 4")
-		print("4, 10")
-		print("4, 11")
-		print("5, 6")
-		print("6, 1")
-		print("6, 2")
-		print("8, 1")
-		print("8, 2")
-		print("8, 4")
-		print("8, 6")
-		print("8, 8")
-		print("10, 0")
-		print("10, 6")
-		print("10, 8")
-		print("10, 10")
-
 		#Now Making Graph from the Provided Grid
 		temp_top = self.width*[None]
 
@@ -78,19 +58,126 @@ class Maze:
 			left_node = None
 			new_node = None
 			prv = False
-			cur = self.grid[y, 0]
-			nxt = self.grid[y, 1]
+			cur = False
+			nxt = False
 
 			for x in range(self.width):
-				left_node = None
+				prv = cur
+				cur = self.grid[y, x]
+				if x != self.width-1:
+					nxt = self.grid[y, x+1]
+				else:
+					nxt = False
+
 				new_node = None
 
-				#Edge Case for End Node
+
+				#Edge Case for End Node - MUST BE ON LEFT
 				if x == 0 and cur == True:
-					if end_node == None:
-						end_node = Maze.Node(y, x)
-						left_node = end_node
-						new_node = None
+					if self.end_node == None:
+						self.end_node = Maze.Node(y, x)
+						print(f"End Node Created at ({x}, {y})")
+						self.count += 1
+						left_node = self.end_node
+						new_node = None #No Need for Top Buffer in End Node
+						continue
+				#Edge Case for Start Node - MUST BE ON RIGHT
+				elif x == self.width-1 and cur == True:
+					if self.start_node == None:
+						self.start_node = Maze.Node(y, x)
+						print(f"Start Node Created at ({x}, {y})")
+						self.count += 1
+						left_node.Adjacents[RIGHT] = self.start_node
+						self.start_node.Adjacents[LEFT] = left_node
+						new_node = None #No Need for Top Buffer in Start Node
+						left_node = None
+						continue
+				#For A Wall
+				if cur == False:
+					continue
+
+				#For a Node with Some Left Node waiting to be connected
+				if prv == True:
+					new_node = Maze.Node(y, x)
+					self.count += 1
+					left_node.Adjacents[RIGHT] = new_node
+					new_node.Adjacents[LEFT] = left_node
+					if nxt == True:
+						left_node = new_node
+					else:
+						left_node = None
+				#For a Node without any Left Node
+				else:
+					new_node = Maze.Node(y, x)
+					self.count += 1
+					if nxt == True:
+						left_node = new_node
+						#prv = True
+					else:
+						left_node = None
+						#prv = False
+
+				#Using Top Buffer
+				if new_node != None:
+					#If there exists a node above
+					if temp_top[x] != None:
+						temp_top[x].Adjacents[DOWN] = new_node
+						new_node.Adjacents[UP] = temp_top[x]
+
+					#Updating Top Buffer
+					temp_top[x] = new_node
+				else:
+					#Resetting Top Buffer
+					temp_top[x] = None
+
+
+		temp_count = 0
+
+		for i in range(self.height):
+			for j in range(self.width):
+				if self.grid[i, j] == True:
+					temp_count += 1
+
+		print("Nodes Created:", self.count)
+		print("Expected:", temp_count)
+
+	def traverse_graph(self):
+		temp_count = np.zeros(1, dtype=int)
+		temp_grid = np.copy(self.grid)
+
+		if self.start_node == None:
+			print("Start Node shouldn't be None!")
+			return
+		elif self.end_node == None:
+			print("End Node shouldn't be None!")
+			return
+
+		#print("Start Node:", self.start_node.x, self.start_node.y)
+		#print("End Node:", self.end_node.x, self.end_node.y)
+
+		self.traverse_util(self.start_node, temp_count, temp_grid)
+
+		print("Counted Nodes:", temp_count[0])
+
+
+	def traverse_util(self, cur, temp_count, temp_grid):
+		#print(f"Node Traversed at({cur.x}, {cur.y})")
+		temp_count[0] += 1
+		temp_grid[cur.y, cur.x] = False
+		up_node = cur.Adjacents[UP]
+		left_node = cur.Adjacents[LEFT]
+		right_node = cur.Adjacents[RIGHT]
+		down_node = cur.Adjacents[DOWN]
+
+		if up_node != None and temp_grid[up_node.y, up_node.x] == True:
+			self.traverse_util(up_node, temp_count, temp_grid)
+		if left_node != None and temp_grid[left_node.y, left_node.x] == True:
+			self.traverse_util(left_node, temp_count, temp_grid)
+		if right_node != None and temp_grid[right_node.y, right_node.x] == True:
+			self.traverse_util(right_node, temp_count, temp_grid)
+		if down_node != None and temp_grid[down_node.y, down_node.x] == True:
+			self.traverse_util(down_node, temp_count, temp_grid)
+
 
 
 
@@ -120,6 +207,9 @@ def main():
 
 	#Initializing Maze
 	maze = Maze(maze_dimensions)
+
+	#Checking Nodes
+	maze.traverse_graph()
 
 
 if __name__ == '__main__':
